@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Retro Spiele-Hub</title>
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #1a1a2e;
+    color: #e0e0e0;
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+
+  h1 {
+    font-size: 36px;
+    letter-spacing: 4px;
+    margin-bottom: 40px;
+    color: #ffffff;
+    text-align: center;
+  }
+
+  .game-grid {
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .game-card {
+    background-color: #16213e;
+    border: 3px solid #0f3460;
+    border-radius: 8px;
+    padding: 30px;
+    width: 260px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .game-card:hover {
+    transform: translateY(-5px);
+    border-color: #e94560;
+  }
+
+  .game-card h2 {
+    margin: 0;
+    font-size: 22px;
+    color: #e94560;
+  }
+
+  .game-card p {
+    margin: 0;
+    font-size: 14px;
+    color: #9aa5ce;
+    line-height: 1.5;
+  }
+
+  .play-button {
+    display: inline-block;
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    text-decoration: none;
+    color: #ffffff;
+    background-color: #0f3460;
+    border: 2px solid #0f3460;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+  }
+
+  .play-button:hover {
+    background-color: #e94560;
+    border-color: #e94560;
+  }
+</style>
+</head>
+<body>
+
+  <h1>RETRO SPIELE-HUB</h1>
+
+  <div class="game-grid">
+    <div class="game-card">
+      <h2>Minesweeper</h2>
+      <p>Decke alle sicheren Felder auf und vermeide die versteckten Minen.</p>
+      <a href="minesweeper.html" class="play-button">Spielen</a>
+    </div>
+
+    <div class="game-card">
+      <h2>Space Invaders</h2>
+      <p>Wehre die anrückenden Aliens ab und verteidige die Erde.</p>
+      <a href="space_invaders.html" class="play-button">Spielen</a>
+    </div>
+
+    <div class="game-card">
+      <h2>Tetris</h2>
+      <p>Staple die fallenden Blöcke passend und lösche komplette Linien.</p>
+      <a href="tetris.html" class="play-button">Spielen</a>
+    </div>
+
+    <div class="game-card">
+      <h2>Dungeon</h2>
+      <p>Erkunde das Verliess aber achte auf die Monster!</p>
+      <a href="dungeon_crawler.html" class="play-button">Spielen</a>
+    </div>
+
+  </div>
+
+</body>
+</html>
