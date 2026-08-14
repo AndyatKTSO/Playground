@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Snake</title>
+<style>
+  :root {
+    --cell-size: 24px;
+    --color-bg: #1a1a2e;
+    --color-panel: #16213e;
+    --color-border: #0f3460;
+    --color-text: #e0e0e0;
+    --color-accent: #e94560;
+    --color-snake: #27ae60;
+    --color-snake-head: #2ecc71;
+    --color-food: #e94560;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  .back-button {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    padding: 8px 14px;
+    font-size: 14px;
+    text-decoration: none;
+    color: var(--color-text);
+    background-color: var(--color-panel);
+    border: 2px solid var(--color-border);
+    border-radius: 4px;
+    font-weight: bold;
+    transition: background-color 0.2s;
+  }
+  .back-button:hover {
+    background-color: var(--color-border);
+  }
+
+  h1 {
+    margin: 20px 0 10px 0;
+    font-size: 28px;
+    letter-spacing: 4px;
+  }
+
+  .game-layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+
+  .board-wrapper {
+    position: relative;
+    border: 3px solid var(--color-border);
+    background-color: #000000;
+  }
+
+  canvas {
+    display: block;
+  }
+
+  .side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 180px;
+  }
+
+  .panel-box {
+    background-color: var(--color-panel);
+    border: 2px solid var(--color-border);
+    border-radius: 6px;
+    padding: 12px;
+  }
+
+  .panel-box h2 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #9aa5ce;
+  }
+
+  .panel-box .value {
+    font-size: 22px;
+    font-weight: bold;
+  }
+
+  .difficulty-select,
+  .restart-button {
+    width: 100%;
+    padding: 8px;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 4px;
+    border: 2px solid var(--color-border);
+    background-color: #0f3460;
+    color: var(--color-text);
+  }
+
+  .restart-button {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+    font-weight: bold;
+  }
+
+  .restart-button:active {
+    filter: brightness(0.9);
+  }
+
+  .controls-list {
+    font-size: 13px;
+    color: #9aa5ce;
+    line-height: 1.6;
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
+  }
+
+  .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.75);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 10px;
+  }
+
+  .overlay.visible {
+    display: flex;
+  }
+
+  .overlay .title {
+    font-size: 26px;
+    font-weight: bold;
+    color: var(--color-accent);
+  }
+
+  .overlay .subtitle {
+    font-size: 15px;
+    color: #cccccc;
+  }
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back-button">&larr; Zurück</a>
+
+<h1>SNAKE</h1>
+
+<div class="game-layout">
+  <div class="board-wrapper">
+    <canvas id="boardCanvas"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="title" id="overlayTitle">Pause</div>
+      <div class="subtitle" id="overlaySubtitle">Leertaste zum Fortsetzen</div>
+    </div>
+  </div>
+
+  <div class="side-panel">
+    <div class="panel-box">
+      <h2>Schwierigkeit</h2>
+      <select class="difficulty-select" id="difficultySelect">
+        <option value="easy">Leicht</option>
+        <option value="medium" selected>Mittel</option>
+        <option value="hard">Schwer</option>
+      </select>
+    </div>
+
+    <div class="panel-box">
+      <h2>Punkte</h2>
+      <div class="value" id="scoreValue">0</div>
+    </div>
+
+    <div class="panel-box">
+      <h2>Highscore</h2>
+      <div class="value" id="highscoreValue">0</div>
+    </div>
+
+    <button class="restart-button" id="restartButton">Neustart</button>
+
+    <div class="panel-box">
+      <h2>Steuerung</h2>
+      <ul class="controls-list">
+        <li>&#8592; &#8593; &#8594; &#8595; Bewegen</li>
+        <li>WASD funktioniert auch</li>
+        <li>Leertaste: Pause</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const BOARD_COLS = 20;
+const BOARD_ROWS = 20;
+
+const DIFFICULTY_PRESETS = Object.freeze({
+  easy: { stepMs: 160 },
+  medium: { stepMs: 110 },
+  hard: { stepMs: 70 }
+});
+
+const DEFAULT_DIFFICULTY = "medium";
+const HIGHSCORE_STORAGE_KEY = "snake_highscore";
+
+const Direction = Object.freeze({
+  UP: { x: 0, y: -1 },
+  DOWN: { x: 0, y: 1 },
+  LEFT: { x: -1, y: 0 },
+  RIGHT: { x: 1, y: 0 }
+});
+
+function isOppositeDirection(a, b) {
+  return a.x === -b.x && a.y === -b.y;
+}
+
+class SnakeGame {
+  constructor(cols, rows) {
+    this.cols = cols;
+    this.rows = rows;
+    this.reset();
+  }
+
+  reset() {
+    const startX = Math.floor(this.cols / 2);
+    const startY = Math.floor(this.rows / 2);
+
+    this.snake = [
+      { x: startX - 1, y: startY },
+      { x: startX - 2, y: startY },
+      { x: startX - 3, y: startY }
+    ];
+    this.direction = Direction.RIGHT;
+    this.pendingDirection = Direction.RIGHT;
+    this.score = 0;
+    this.isGameOver = false;
+    this.isPaused = false;
+    this.food = this.spawnFood();
+  }
+
+  spawnFood() {
+    const occupied = new Set(this.snake.map(segment => `${segment.x},${segment.y}`));
+    const freeCells = [];
+
+    for (let y = 0; y < this.rows; y++) {
+      for (let x = 0; x < this.cols; x++) {
+        const key = `${x},${y}`;
+        if (!occupied.has(key)) {
+          freeCells.push({ x, y });
+        }
+      }
+    }
+
+    if (freeCells.length === 0) {
+      return null;
+    }
+
+    const randomIndex = Math.floor(Math.random() * freeCells.length);
+    return freeCells[randomIndex];
+  }
+
+  setDirection(newDirection) {
+    if (isOppositeDirection(newDirection, this.direction)) {
+      return;
+    }
+    this.pendingDirection = newDirection;
+  }
+
+  togglePause() {
+    if (this.isGameOver) {
+      return;
+    }
+    this.isPaused = !this.isPaused;
+  }
+
+  step() {
+    if (this.isGameOver || this.isPaused) {
+      return;
+    }
+
+    this.direction = this.pendingDirection;
+
+    const currentHead = this.snake[0];
+    const newHead = {
+      x: currentHead.x + this.direction.x,
+      y: currentHead.y + this.direction.y
+    };
+
+    if (this.hitsWall(newHead) || this.hitsSelf(newHead)) {
+      this.isGameOver = true;
+      return;
+    }
+
+    this.snake.unshift(newHead);
+
+    const ateFood = this.food && newHead.x === this.food.x && newHead.y === this.food.y;
+    if (ateFood) {
+      this.score += 10;
+      this.food = this.spawnFood();
+      if (!this.food) {
+        this.isGameOver = true;
+      }
+    } else {
+      this.snake.pop();
+    }
+  }
+
+  hitsWall(position) {
+    return position.x < 0 || position.x >= this.cols || position.y < 0 || position.y >= this.rows;
+  }
+
+  hitsSelf(position) {
+    return this.snake.some(segment => segment.x === position.x && segment.y === position.y);
+  }
+}
+
+class SnakeUI {
+  constructor(boardCanvas, overlayElement, overlayTitleElement, overlaySubtitleElement,
+              scoreValueElement, highscoreValueElement, restartButtonElement, difficultySelectElement) {
+    this.boardCanvas = boardCanvas;
+    this.context = boardCanvas.getContext("2d");
+    this.overlayElement = overlayElement;
+    this.overlayTitleElement = overlayTitleElement;
+    this.overlaySubtitleElement = overlaySubtitleElement;
+    this.scoreValueElement = scoreValueElement;
+    this.highscoreValueElement = highscoreValueElement;
+    this.restartButtonElement = restartButtonElement;
+    this.difficultySelectElement = difficultySelectElement;
+
+    this.difficultySelectElement.value = DEFAULT_DIFFICULTY;
+    this.highscore = this.loadHighscore();
+    this.stepAccumulatorMs = 0;
+    this.lastFrameTimeMs = 0;
+
+    this.boardCanvas.width = BOARD_COLS * getComputedCellSize();
+    this.boardCanvas.height = BOARD_ROWS * getComputedCellSize();
+
+    this.restartButtonElement.addEventListener("click", () => this.startNewGame());
+    this.difficultySelectElement.addEventListener("change", () => this.startNewGame());
+    document.addEventListener("keydown", (event) => this.handleKeyDown(event));
+
+    this.startNewGame();
+    requestAnimationFrame((timeMs) => this.loop(timeMs));
+  }
+
+  loadHighscore() {
+    const stored = window.localStorage ? window.localStorage.getItem(HIGHSCORE_STORAGE_KEY) : null;
+    const parsed = parseInt(stored, 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  saveHighscoreIfNeeded() {
+    if (this.game.score > this.highscore) {
+      this.highscore = this.game.score;
+      if (window.localStorage) {
+        window.localStorage.setItem(HIGHSCORE_STORAGE_KEY, String(this.highscore));
+      }
+    }
+  }
+
+  getStepMs() {
+    return DIFFICULTY_PRESETS[this.difficultySelectElement.value].stepMs;
+  }
+
+  startNewGame() {
+    this.game = new SnakeGame(BOARD_COLS, BOARD_ROWS);
+    this.stepAccumulatorMs = 0;
+    this.render();
+  }
+
+  handleKeyDown(event) {
+    const keyToDirection = {
+      ArrowUp: Direction.UP,
+      ArrowDown: Direction.DOWN,
+      ArrowLeft: Direction.LEFT,
+      ArrowRight: Direction.RIGHT,
+      w: Direction.UP,
+      s: Direction.DOWN,
+      a: Direction.LEFT,
+      d: Direction.RIGHT,
+      W: Direction.UP,
+      S: Direction.DOWN,
+      A: Direction.LEFT,
+      D: Direction.RIGHT
+    };
+
+    if (event.code === "Space") {
+      event.preventDefault();
+      this.game.togglePause();
+      this.render();
+      return;
+    }
+
+    const direction = keyToDirection[event.key];
+    if (direction) {
+      event.preventDefault();
+      this.game.setDirection(direction);
+    }
+  }
+
+  loop(timeMs) {
+    const deltaMs = this.lastFrameTimeMs ? timeMs - this.lastFrameTimeMs : 0;
+    this.lastFrameTimeMs = timeMs;
+
+    if (!this.game.isGameOver && !this.game.isPaused) {
+      this.stepAccumulatorMs += deltaMs;
+      const stepMs = this.getStepMs();
+
+      while (this.stepAccumulatorMs >= stepMs) {
+        this.stepAccumulatorMs -= stepMs;
+        this.game.step();
+        if (this.game.isGameOver) {
+          this.saveHighscoreIfNeeded();
+          break;
+        }
+      }
+      this.render();
+    }
+
+    requestAnimationFrame((nextTimeMs) => this.loop(nextTimeMs));
+  }
+
+  render() {
+    this.renderBoard();
+    this.renderScore();
+    this.renderOverlay();
+  }
+
+  renderBoard() {
+    const cellSize = getComputedCellSize();
+    const context = this.context;
+
+    context.fillStyle = "#000000";
+    context.fillRect(0, 0, this.boardCanvas.width, this.boardCanvas.height);
+
+    if (this.game.food) {
+      this.drawCell(this.game.food.x, this.game.food.y, cellSize, getCssColor("--color-food"));
+    }
+
+    this.game.snake.forEach((segment, index) => {
+      const color = index === 0 ? getCssColor("--color-snake-head") : getCssColor("--color-snake");
+      this.drawCell(segment.x, segment.y, cellSize, color);
+    });
+  }
+
+  drawCell(x, y, cellSize, color) {
+    const context = this.context;
+    const padding = 1;
+    context.fillStyle = color;
+    context.fillRect(
+      x * cellSize + padding,
+      y * cellSize + padding,
+      cellSize - padding * 2,
+      cellSize - padding * 2
+    );
+  }
+
+  renderScore() {
+    this.scoreValueElement.textContent = this.game.score;
+    this.highscoreValueElement.textContent = this.highscore;
+  }
+
+  renderOverlay() {
+    if (this.game.isGameOver) {
+      this.overlayTitleElement.textContent = "Game Over";
+      this.overlaySubtitleElement.textContent = `Punkte: ${this.game.score} — Neustart-Knopf klicken`;
+      this.overlayElement.classList.add("visible");
+      return;
+    }
+
+    if (this.game.isPaused) {
+      this.overlayTitleElement.textContent = "Pause";
+      this.overlaySubtitleElement.textContent = "Leertaste zum Fortsetzen";
+      this.overlayElement.classList.add("visible");
+      return;
+    }
+
+    this.overlayElement.classList.remove("visible");
+  }
+}
+
+function getComputedCellSize() {
+  const rootStyles = getComputedStyle(document.documentElement);
+  return parseInt(rootStyles.getPropertyValue("--cell-size"), 10);
+}
+
+function getCssColor(variableName) {
+  return getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
+}
+
+function main() {
+  const boardCanvas = document.getElementById("boardCanvas");
+  const overlayElement = document.getElementById("overlay");
+  const overlayTitleElement = document.getElementById("overlayTitle");
+  const overlaySubtitleElement = document.getElementById("overlaySubtitle");
+  const scoreValueElement = document.getElementById("scoreValue");
+  const highscoreValueElement = document.getElementById("highscoreValue");
+  const restartButtonElement = document.getElementById("restartButton");
+  const difficultySelectElement = document.getElementById("difficultySelect");
+
+  new SnakeUI(
+    boardCanvas,
+    overlayElement,
+    overlayTitleElement,
+    overlaySubtitleElement,
+    scoreValueElement,
+    highscoreValueElement,
+    restartButtonElement,
+    difficultySelectElement
+  );
+}
+
+main();
+</script>
+
+</body>
+</html>
